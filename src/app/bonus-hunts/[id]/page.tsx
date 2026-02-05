@@ -1,74 +1,72 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Target, DollarSign, Trophy, Users, Calendar } from 'lucide-react';
+import { ArrowLeft, Target, DollarSign, Trophy, Users, Calendar, Lock, Plus } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '@/components/ui';
-import { BonusList } from '@/components/bonus-hunt';
+import { BonusList, GuessInput, AddBonusModal } from '@/components/bonus-hunt';
 import { formatNumber, cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import type { BonusHunt } from '@/types';
 
-// Mock data - in production this would come from an API
-const mockBonusHunts: Record<string, BonusHunt> = {
-  '1': {
-    id: '1',
-    name: 'Friday Night Hunt #42',
-    startBalance: 5000,
-    bonuses: [
-      { id: 'b1', slotName: 'Sweet Bonanza', provider: 'Pragmatic Play', betSize: 20, isOpened: true, result: 450, multiplier: 22.5 },
-      { id: 'b2', slotName: 'Gates of Olympus', provider: 'Pragmatic Play', betSize: 20, isOpened: true, result: 120, multiplier: 6 },
-      { id: 'b3', slotName: 'Wanted Dead or Wild', provider: 'Hacksaw', betSize: 40, isOpened: true, result: 800, multiplier: 20 },
-      { id: 'b4', slotName: 'Mental', provider: 'NoLimit City', betSize: 20, isOpened: true, result: 340, multiplier: 17 },
-      { id: 'b5', slotName: 'Fruit Party', provider: 'Pragmatic Play', betSize: 20, isOpened: true, result: 95, multiplier: 4.75 },
-      { id: 'b6', slotName: 'Dog House Megaways', provider: 'Pragmatic Play', betSize: 40, isOpened: true, result: 1200, multiplier: 30 },
-    ],
-    guesses: [
-      { id: 'g1', visibleUserId: 'u1', userId: 'u1', username: 'LuckyAce', guessedBalance: 7500, guessedAt: new Date() },
-      { id: 'g2', visibleUserId: 'u2', userId: 'u2', username: 'HighRoller', guessedBalance: 4200, guessedAt: new Date() },
-      { id: 'g3', visibleUserId: 'u3', userId: 'u3', username: 'StreamKing', guessedBalance: 8900, guessedAt: new Date() },
-    ],
-    status: 'started',
-    createdAt: new Date(Date.now() - 3600000),
-    startedAt: new Date(Date.now() - 1800000),
-  },
-  '3': {
-    id: '3',
-    name: 'Thursday Hunt #41',
-    startBalance: 4000,
-    finalBalance: 6850,
-    bonuses: [
-      { id: 'b10', slotName: 'Razor Shark', provider: 'Push Gaming', betSize: 20, isOpened: true, result: 340, multiplier: 17 },
-      { id: 'b11', slotName: 'Jammin Jars', provider: 'Push Gaming', betSize: 40, isOpened: true, result: 1200, multiplier: 30 },
-      { id: 'b12', slotName: 'Reactoonz', provider: 'Play\'n GO', betSize: 20, isOpened: true, result: 180, multiplier: 9 },
-      { id: 'b13', slotName: 'Fire in the Hole', provider: 'NoLimit City', betSize: 20, isOpened: true, result: 2400, multiplier: 120 },
-      { id: 'b14', slotName: 'Sweet Bonanza', provider: 'Pragmatic Play', betSize: 20, isOpened: true, result: 560, multiplier: 28 },
-      { id: 'b15', slotName: 'Book of Dead', provider: 'Play\'n GO', betSize: 20, isOpened: true, result: 220, multiplier: 11 },
-      { id: 'b16', slotName: 'Gates of Olympus', provider: 'Pragmatic Play', betSize: 40, isOpened: true, result: 1950, multiplier: 48.75 },
-    ],
-    guesses: [
-      { id: 'g4', visibleUserId: 'u1', userId: 'u1', username: 'LuckyAce', guessedBalance: 6500, guessedAt: new Date() },
-      { id: 'g5', visibleUserId: 'u2', userId: 'u2', username: 'HighRoller', guessedBalance: 7200, guessedAt: new Date() },
-      { id: 'g6', visibleUserId: 'u3', userId: 'u3', username: 'StreamKing', guessedBalance: 5100, guessedAt: new Date() },
-      { id: 'g7', visibleUserId: 'u4', userId: 'u4', username: 'SlotMaster', guessedBalance: 8200, guessedAt: new Date() },
-      { id: 'g8', visibleUserId: 'u5', userId: 'u5', username: 'BigWinner', guessedBalance: 3500, guessedAt: new Date() },
-    ],
-    status: 'completed',
-    createdAt: new Date(Date.now() - 86400000),
-    startedAt: new Date(Date.now() - 82800000),
-    completedAt: new Date(Date.now() - 79200000),
-    winners: [
-      { rank: 1, visibleUserId: 'u1', userId: 'u1', username: 'LuckyAce', guessedBalance: 6500, difference: 350, prize: 5000 },
-      { rank: 2, visibleUserId: 'u2', userId: 'u2', username: 'HighRoller', guessedBalance: 7200, difference: 350, prize: 2500 },
-      { rank: 3, visibleUserId: 'u3', userId: 'u3', username: 'StreamKing', guessedBalance: 5100, difference: 1750, prize: 1000 },
-    ],
-  },
-};
-
 export default function BonusHuntDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const hunt = mockBonusHunts[id];
-  const { user } = useAuth();
+  const [hunt, setHunt] = useState<BonusHunt | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    fetchHuntDetail();
+  }, [id]);
+
+  const fetchHuntDetail = async () => {
+    try {
+      const response = await fetch(`/api/bonus-hunts/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch bonus hunt');
+      }
+      const data = await response.json();
+      setHunt(data.bonusHunt);
+    } catch (error) {
+      console.error('❌ Error fetching bonus hunt:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuessSubmit = async (huntId: string, guess: number) => {
+    try {
+      const response = await fetch(`/api/bonus-hunts/${huntId}/guess`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ guessedBalance: guess }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit prediction');
+      }
+
+      const result = await response.json();
+      console.log('✅ Prediction submitted:', result);
+
+      // Refetch the hunt to update the guesses list
+      await fetchHuntDetail();
+    } catch (error) {
+      console.error('❌ Error submitting prediction:', error);
+      alert(error instanceof Error ? error.message : 'Failed to submit prediction. Please try again.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="text-center text-gray-400">Loading bonus hunt...</div>
+      </div>
+    );
+  }
 
   if (!hunt) {
     return (
@@ -86,14 +84,18 @@ export default function BonusHuntDetailPage({ params }: { params: Promise<{ id: 
   }
 
   const totalBonuses = hunt.bonuses.length;
+  const openedBonuses = hunt.bonuses.filter((b) => b.isOpened).length;
   const totalPayout = hunt.bonuses
     .filter((b) => b.result !== undefined)
     .reduce((sum, b) => sum + (b.result || 0), 0);
-  const profitLoss = (hunt.finalBalance || totalPayout) - hunt.startBalance;
-  const profitPercent = ((hunt.finalBalance || totalPayout) / hunt.startBalance - 1) * 100;
+
+  const finalBalance = hunt.finalBalance || totalPayout;
+  const profitLoss = finalBalance - hunt.startBalance;
+  const profitPercent = (finalBalance / hunt.startBalance - 1) * 100;
 
   // Find current user's prediction
   const userPrediction = user ? hunt.guesses.find(g => g.userId === user.id) : null;
+  const userHasGuessed = !!userPrediction;
 
   const statusConfig = {
     open: { label: 'Open for Predictions', badgeVariant: 'info' as const },
@@ -114,11 +116,25 @@ export default function BonusHuntDetailPage({ params }: { params: Promise<{ id: 
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <Badge variant={status.badgeVariant}>{status.label}</Badge>
+          <Badge
+            variant={status.badgeVariant}
+            className={hunt.status === 'started' ? 'animate-pulse' : ''}
+          >
+            {hunt.status === 'started' && (
+              <span className="w-2 h-2 bg-green-400 rounded-full mr-1.5 animate-ping" />
+            )}
+            {status.label}
+          </Badge>
           {hunt.completedAt && (
             <span className="text-sm text-gray-400 flex items-center gap-1">
               <Calendar className="w-4 h-4" />
               {new Date(hunt.completedAt).toLocaleDateString()}
+            </span>
+          )}
+          {hunt.status === 'started' && (
+            <span className="text-sm text-gray-400 flex items-center gap-1">
+              <Lock className="w-4 h-4" />
+              Predictions locked
             </span>
           )}
         </div>
@@ -140,8 +156,12 @@ export default function BonusHuntDetailPage({ params }: { params: Promise<{ id: 
         <Card variant="glass" className="text-center">
           <div className="flex flex-col items-center p-4">
             <Target className="w-6 h-6 text-purple-400 mb-2" />
-            <p className="text-2xl font-bold text-white">{totalBonuses}</p>
-            <p className="text-sm text-gray-400">Total Bonuses</p>
+            <p className="text-2xl font-bold text-white">
+              {hunt.status === 'started' ? `${openedBonuses}/` : ''}{totalBonuses}
+            </p>
+            <p className="text-sm text-gray-400">
+              {hunt.status === 'started' ? 'Progress' : 'Total Bonuses'}
+            </p>
           </div>
         </Card>
         <Card variant="glass" className="text-center">
@@ -170,7 +190,7 @@ export default function BonusHuntDetailPage({ params }: { params: Promise<{ id: 
       </div>
 
       {/* Final Result (for completed hunts) */}
-      {hunt.status === 'completed' && hunt.finalBalance !== undefined && (
+      {hunt.status === 'completed' && (
         <Card variant="gradient" className="mb-8">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -180,7 +200,7 @@ export default function BonusHuntDetailPage({ params }: { params: Promise<{ id: 
                   'text-4xl font-bold',
                   profitLoss >= 0 ? 'text-green-400' : 'text-red-400'
                 )}>
-                  ${formatNumber(hunt.finalBalance)}
+                  ${formatNumber(finalBalance)}
                 </p>
               </div>
               <div className="text-right">
@@ -203,6 +223,48 @@ export default function BonusHuntDetailPage({ params }: { params: Promise<{ id: 
         </Card>
       )}
 
+      {/* Prediction Section (for open hunts) */}
+      {hunt.status === 'open' && (
+        <Card variant="gradient" className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-purple-400" />
+              {userHasGuessed ? 'Edit Your Prediction' : 'Make Your Prediction'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <GuessInput
+              huntId={hunt.id}
+              startBalance={hunt.startBalance}
+              initialValue={userPrediction?.guessedBalance}
+              onSubmit={handleGuessSubmit}
+              disabled={!isAuthenticated}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Current Balance (for started hunts) */}
+      {hunt.status === 'started' && (
+        <Card variant="gradient" className="mb-8">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-gray-400">Current Balance</p>
+              <p className={cn(
+                'text-3xl font-bold',
+                totalPayout >= hunt.startBalance ? 'text-green-400' : 'text-red-400'
+              )}>
+                ${formatNumber(totalPayout)}
+              </p>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Progress</span>
+              <span className="text-white font-medium">{openedBonuses} / {totalBonuses} opened</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Winners Section */}
       {hunt.status === 'completed' && hunt.winners && hunt.winners.length > 0 && (
         <Card className="mb-8">
@@ -214,9 +276,9 @@ export default function BonusHuntDetailPage({ params }: { params: Promise<{ id: 
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {hunt.winners.map((winner) => (
+              {hunt.winners.map((winner: any) => (
                 <div
-                  key={winner.visibleUserId}
+                  key={winner.userId || winner.visibleUserId}
                   className={cn(
                     'flex items-center justify-between p-4 rounded-lg',
                     winner.rank === 1 ? 'bg-yellow-500/20 border border-yellow-500/30' :
@@ -257,14 +319,17 @@ export default function BonusHuntDetailPage({ params }: { params: Promise<{ id: 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="w-5 h-5 text-purple-400" />
-            Bonus List
+            Bonus List {totalBonuses > 0 && `(${totalBonuses})`}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <BonusList bonuses={hunt.bonuses} showAll />
+          {totalBonuses > 0 ? (
+            <BonusList bonuses={hunt.bonuses} showAll />
+          ) : (
+            <p className="text-gray-400 text-center py-8">No bonuses added yet</p>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
-

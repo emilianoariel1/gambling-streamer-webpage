@@ -1,106 +1,69 @@
 'use client';
 
-import { useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trophy, Plus, Swords } from 'lucide-react';
 import { TournamentCard } from '@/components/tournament';
-import { Card, Badge } from '@/components/ui';
+import { Card, Badge, Button } from '@/components/ui';
+import { CreateTournamentModal, type TournamentFormData } from '@/components/admin';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 import type { Tournament } from '@/types';
-
-// Mock data
-const mockTournaments: Tournament[] = [
-  {
-    id: '1',
-    title: 'Weekly High Roller Challenge',
-    description: 'Compete for the highest multiplier win! Prize: $1000 Cash + VIP Status',
-    prize: '$1000 Cash + VIP Status',
-    tournamentType: 8,
-    participants: Array(8).fill(null).map((_, i) => ({
-      userId: `user${i}`,
-      username: `Player${i}`,
-      enteredAt: new Date(),
-    })),
-    startsAt: new Date(),
-    endsAt: new Date(Date.now() + 86400000 * 5),
-    isActive: true,
-  },
-  {
-    id: '2',
-    title: 'Slots Tournament',
-    description: 'Best win rate over 100 spins wins! Prize: 50,000 Points',
-    prize: '50,000 Points',
-    tournamentType: 16,
-    participants: Array(16).fill(null).map((_, i) => ({
-      userId: `user${i}`,
-      username: `Player${i}`,
-      enteredAt: new Date(),
-    })),
-    startsAt: new Date(),
-    endsAt: new Date(Date.now() + 86400000 * 3),
-    isActive: true,
-  },
-  {
-    id: '3',
-    title: 'Free Entry Beginner Tournament',
-    description: 'New players only! Prize: 10,000 Points',
-    prize: '10,000 Points',
-    tournamentType: 8,
-    participants: Array(8).fill(null).map((_, i) => ({
-      userId: `user${i}`,
-      username: `Player${i}`,
-      enteredAt: new Date(),
-    })),
-    startsAt: new Date(),
-    endsAt: new Date(Date.now() + 86400000 * 2),
-    isActive: true,
-  },
-];
-
-const pastTournaments: Tournament[] = [
-  {
-    id: '4',
-    title: 'Last Week High Stakes',
-    description: 'High stakes tournament completed! Prize: $500 Cash',
-    prize: '$500 Cash',
-    tournamentType: 8,
-    participants: Array(8).fill(null).map((_, i) => ({
-      userId: `user${i}`,
-      username: `Player${i}`,
-      enteredAt: new Date(Date.now() - 86400000 * 8),
-    })),
-    startsAt: new Date(Date.now() - 86400000 * 10),
-    endsAt: new Date(Date.now() - 86400000 * 3),
-    isActive: false,
-    winnerId: 'winner456',
-    winnerUsername: 'ProGambler99',
-  },
-  {
-    id: '5',
-    title: 'Monthly Mega Tournament',
-    description: 'Biggest tournament of the month! Prize: $2000 Cash',
-    prize: '$2000 Cash',
-    tournamentType: 16,
-    participants: Array(16).fill(null).map((_, i) => ({
-      userId: `user${i}`,
-      username: `Player${i}`,
-      enteredAt: new Date(Date.now() - 86400000 * 35),
-    })),
-    startsAt: new Date(Date.now() - 86400000 * 40),
-    endsAt: new Date(Date.now() - 86400000 * 10),
-    isActive: false,
-    winnerId: 'winner789',
-    winnerUsername: 'SlotKing',
-  },
-];
 
 type FilterType = 'active' | 'ended';
 
 export default function TournamentsPage() {
   const [filter, setFilter] = useState<FilterType>('active');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const allTournaments = [...mockTournaments, ...pastTournaments];
+  useEffect(() => {
+    fetchTournaments();
+  }, []);
 
-  const filteredTournaments = allTournaments.filter((t) => {
+  const fetchTournaments = async () => {
+    try {
+      const response = await fetch('/api/tournaments');
+      if (!response.ok) {
+        throw new Error('Failed to fetch tournaments');
+      }
+      const data = await response.json();
+      setTournaments(data.tournaments || []);
+    } catch (error) {
+      console.error('❌ Error fetching tournaments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateTournament = async (data: TournamentFormData) => {
+    try {
+      const response = await fetch('/api/admin/tournaments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create tournament');
+      }
+
+      const result = await response.json();
+      console.log('✅ Tournament created:', result);
+
+      // Refresh the tournaments list
+      fetchTournaments();
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error('❌ Error creating tournament:', error);
+      alert('Failed to create tournament. Please try again.');
+    }
+  };
+
+  const filteredTournaments = tournaments.filter((t) => {
     switch (filter) {
       case 'active':
         return t.isActive;
@@ -112,18 +75,37 @@ export default function TournamentsPage() {
   });
 
   const filters: { value: FilterType; label: string; count: number }[] = [
-    { value: 'active', label: 'Active', count: allTournaments.filter((t) => t.isActive).length },
-    { value: 'ended', label: 'Ended', count: allTournaments.filter((t) => !t.isActive).length },
+    { value: 'active', label: 'Active', count: tournaments.filter((t) => t.isActive).length },
+    { value: 'ended', label: 'Ended', count: tournaments.filter((t) => !t.isActive).length },
   ];
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="text-center text-gray-400">Loading tournaments...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3 mb-4">
-          <Trophy className="w-8 h-8 text-yellow-500" />
-          Tournaments
-        </h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <Swords className="w-8 h-8 text-orange-400" />
+            Tournaments
+          </h1>
+          {user?.isAdmin && (
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-orange-600 hover:bg-orange-700 text-white flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Create Tournament
+            </Button>
+          )}
+        </div>
         <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
       </div>
 
@@ -160,6 +142,13 @@ export default function TournamentsPage() {
           ))}
         </div>
       )}
+
+      {/* Create Modal */}
+      <CreateTournamentModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateTournament}
+      />
     </div>
   );
 }

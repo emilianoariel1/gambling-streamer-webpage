@@ -10,12 +10,13 @@ import Link from 'next/link';
 interface GuessInputProps {
   huntId: string;
   startBalance: number;
+  initialValue?: number;
   onSubmit?: (huntId: string, guess: number) => void;
   disabled?: boolean;
 }
 
-export function GuessInput({ huntId, startBalance, onSubmit, disabled }: GuessInputProps) {
-  const [guessValue, setGuessValue] = useState('');
+export function GuessInput({ huntId, startBalance, initialValue, onSubmit, disabled }: GuessInputProps) {
+  const [guessValue, setGuessValue] = useState(initialValue ? String(initialValue) : '');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { isAuthenticated } = useAuth();
@@ -76,7 +77,7 @@ export function GuessInput({ huntId, startBalance, onSubmit, disabled }: GuessIn
   return (
     <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
       <label className="block text-sm font-medium text-gray-300 mb-2">
-        Your Prediction for Final Balance
+        {initialValue ? 'Edit Your Prediction' : 'Your Prediction for Final Balance'}
       </label>
       <p className="text-xs text-gray-500 mb-3">
         Start balance is ${formatNumber(startBalance)}. What will the final balance be?
@@ -103,12 +104,15 @@ export function GuessInput({ huntId, startBalance, onSubmit, disabled }: GuessIn
         <Button
           onClick={handleSubmit}
           disabled={disabled || isSubmitting || !guessValue}
-          className="px-6"
+          className="px-6 flex items-center gap-2"
         >
           {isSubmitting ? (
             <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
-            <Send className="w-5 h-5" />
+            <>
+              <Send className="w-5 h-5" />
+              <span className="hidden sm:inline">{initialValue ? 'Update' : 'Submit'}</span>
+            </>
           )}
         </Button>
       </div>

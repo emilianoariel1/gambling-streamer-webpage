@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   exchangeKickCode,
-  fetchKickUser,
   parseOAuthState,
-  upsertUser,
-  createSessionToken,
-  setSessionCookie,
 } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -19,18 +15,24 @@ export async function GET(request: NextRequest) {
   // Handle OAuth errors
   if (error) {
     console.error('Kick OAuth error:', error);
-    return NextResponse.redirect(`${baseUrl}/auth/login?error=oauth_error`);
+    return NextResponse.redirect(`${baseUrl}/?auth=error&message=oauth_error`);
   }
 
   // Validate code and state
   if (!code || !state) {
-    return NextResponse.redirect(`${baseUrl}/auth/login?error=missing_params`);
+    return NextResponse.redirect(`${baseUrl}/?auth=error&message=missing_params`);
   }
 
   // Verify state matches
-  const storedState = request.cookies.get('oauth_state')?.value;
+  const storedState = request.cookies.get('kick_oauth_state')?.value;
   if (!storedState || storedState !== state) {
-    return NextResponse.redirect(`${baseUrl}/auth/login?error=invalid_state`);
+    return NextResponse.redirect(`${baseUrl}/?auth=error&message=invalid_state`);
+  }
+
+  // Get code_verifier from cookie
+  const codeVerifier = request.cookies.get('kick_code_verifier')?.value;
+  if (!codeVerifier) {
+    return NextResponse.redirect(`${baseUrl}/?auth=error&message=missing_verifier`);
   }
 
   // Parse state to get redirect URL
@@ -38,35 +40,31 @@ export async function GET(request: NextRequest) {
   const redirectTo = parsedState?.redirectTo || '/';
 
   try {
-    // Exchange code for tokens
-    const tokens = await exchangeKickCode(code);
+    // Exchange code for tokens with PKCE
+    const tokens = await exchangeKickCode(code, codeVerifier);
+    console.log('✅ Successfully exchanged code for access token');
 
-    // Fetch user data
-    const kickUser = await fetchKickUser(tokens.access_token);
+    // Instead of fetching user data from server (which gets blocked),
+    // redirect to a client-side page that will fetch the data from the browser
+    const response = NextResponse.redirect(`${baseUrl}/auth/complete?token=${encodeURIComponent(tokens.access_token)}`);
+    response.cookies.delete('kick_oauth_state');
+    response.cookies.delete('kick_code_verifier');
 
-    // Create or update user in database
-    const user = await upsertUser({
-      provider: 'kick',
-      providerId: String(kickUser.id),
-      username: kickUser.username,
-      displayName: kickUser.username,
-      avatar: kickUser.profile_pic,
-      email: kickUser.email || null,
-    });
-
-    // Create session token
-    const sessionToken = await createSessionToken(user);
-
-    // Set session cookie
-    await setSessionCookie(sessionToken);
-
-    // Clear OAuth state cookie and redirect
-    const response = NextResponse.redirect(`${baseUrl}${redirectTo}`);
-    response.cookies.delete('oauth_state');
+    // Pass persistent ID if exists
+    const persistentId = request.cookies.get('kick_persistent_id')?.value;
+    if (persistentId) {
+      response.cookies.set('kick_temp_persistent_id', persistentId, {
+        httpOnly: false, // Client needs to read this
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 300, // 5 minutes
+        path: '/',
+      });
+    }
 
     return response;
   } catch (err) {
-    console.error('Kick OAuth callback error:', err);
-    return NextResponse.redirect(`${baseUrl}/auth/login?error=auth_failed`);
+    console.error('❌ Kick OAuth callback error:', err);
+    return NextResponse.redirect(`${baseUrl}/?auth=error&message=auth_failed`);
   }
 }

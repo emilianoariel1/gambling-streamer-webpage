@@ -1,4 +1,4 @@
-export type AuthProvider = 'kick' | 'discord';
+export type AuthProvider = 'kick';
 
 export interface User {
   id: string;
@@ -11,6 +11,7 @@ export interface User {
   isVip: boolean;
   isModerator: boolean;
   isSubscriber: boolean;
+  isAdmin: boolean;
   points: number;
   createdAt: Date;
   updatedAt: Date;
@@ -41,25 +42,7 @@ export interface KickTokenResponse {
   scope: string;
 }
 
-export interface DiscordUser {
-  id: string;
-  username: string;
-  global_name: string | null;
-  avatar: string | null;
-  email?: string;
-  verified?: boolean;
-}
-
-export interface DiscordTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-  refresh_token: string;
-  scope: string;
-}
-
 export interface OAuthState {
-  provider: AuthProvider;
   redirectTo?: string;
   nonce: string;
 }

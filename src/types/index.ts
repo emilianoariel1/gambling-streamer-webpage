@@ -13,7 +13,7 @@ export interface UserProfile {
   isVip: boolean;
   isModerator: boolean;
   isSubscriber: boolean;
-  provider: 'kick' | 'discord';
+  provider: 'kick';
 }
 
 // Leaderboard types
@@ -22,13 +22,9 @@ export interface LeaderboardEntry {
   userId: string;
   username: string;
   avatar?: string;
-  points: number;
-  wins: number;
-  losses: number;
-  winRate: number;
+  wager: number; // Total money wagered
+  prize: number; // Total prize money won
 }
-
-export type LeaderboardPeriod = 'daily' | 'weekly' | 'monthly' | 'allTime';
 
 // Giveaway types
 export interface Giveaway {
@@ -170,7 +166,8 @@ export interface TournamentParticipant {
   userId: string;
   username: string;
   avatar?: string;
-  enteredAt: Date;
+  seed?: number;
+  joinedAt: Date;
 }
 
 export interface TournamentLeaderboardEntry {

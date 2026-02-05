@@ -3,7 +3,7 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Trophy, Users, Calendar, Clock } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Badge, Button, Avatar } from '@/components/ui';
 import { BracketView, BracketPrediction } from '@/components/tournament';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -309,6 +309,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     )}>
                       {entry.rank}
                     </span>
+                    <Avatar name={entry.username} src={entry.avatar} size="md" />
                     <div>
                       <p className="font-semibold text-white text-lg">{entry.username}</p>
                       <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">

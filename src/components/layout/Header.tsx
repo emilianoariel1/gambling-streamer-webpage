@@ -1,12 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import { Bell, Coins, LogIn } from 'lucide-react';
+import { Bell, Coins } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Badge } from '@/components/ui';
 import { UserMenu } from '@/components/auth';
+import { AdminMenu } from '@/components/admin';
 import { formatNumber } from '@/lib/utils';
+
+// Kick logo as SVG
+function KickLogo({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M6.5 3H10L8.5 8L14 3H18.5L11.5 10L12 12L18.5 21H14L10 14L8.5 16V21H5V3H6.5Z" />
+    </svg>
+  );
+}
 
 export function Header() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -44,6 +59,9 @@ export function Header() {
               <div className="w-8 h-8 rounded-full bg-gray-700 animate-pulse" />
             ) : isAuthenticated && user ? (
               <>
+                {/* Admin Menu */}
+                {user.isAdmin && <AdminMenu />}
+
                 {/* Points */}
                 <div className="hidden sm:flex items-center gap-2 bg-gray-800 px-3 py-1.5 rounded-lg">
                   <Coins className="w-4 h-4 text-yellow-500" />
@@ -66,10 +84,13 @@ export function Header() {
                 <UserMenu />
               </>
             ) : (
-              <Link href="/auth/login">
-                <Button size="sm" className="flex items-center gap-2">
-                  <LogIn className="w-4 h-4" />
-                  <span className="hidden sm:inline">Sign In</span>
+              <Link href="/api/auth/kick">
+                <Button
+                  size="sm"
+                  className="flex items-center gap-2 bg-[#53FC18] hover:bg-[#45d915] text-black font-semibold cursor-pointer focus:outline-none focus:ring-0"
+                >
+                  <KickLogo className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sign In with Kick</span>
                 </Button>
               </Link>
             )}

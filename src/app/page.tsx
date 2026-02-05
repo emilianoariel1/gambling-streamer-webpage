@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Target, Gift, Trophy, Users, Zap } from 'lucide-react';
+import { Target, Gift, Users, Swords } from 'lucide-react';
 import { StreamEmbed } from '@/components/layout';
 import { BonusHuntCard } from '@/components/bonus-hunt';
 import { GiveawayCard } from '@/components/giveaway';
+import { TournamentCard } from '@/components/tournament';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '@/components/ui';
+import { AuthToastHandler } from '@/components/auth/AuthToastHandler';
 import { useAppStore } from '@/lib/store';
 import { formatNumber } from '@/lib/utils';
-import type { BonusHunt, Giveaway, LeaderboardEntry } from '@/types';
+import type { BonusHunt, Giveaway, Tournament } from '@/types';
 
 // Mock data for demonstration
 const mockActiveBonusHunt: BonusHunt = {
@@ -41,16 +43,78 @@ const mockGiveaways: Giveaway[] = [
     entries: [],
     maxEntries: 500,
     pointsCost: 100,
+    numberOfWinners: 1,
     startsAt: new Date(),
     endsAt: new Date(Date.now() + 86400000 * 3),
     isActive: true,
   },
+  {
+    id: '2',
+    title: 'Monthly Cash Prize',
+    description: 'Biggest giveaway of the month - real cash prizes!',
+    prize: '$500 Cash',
+    entries: Array(234).fill(null).map((_, i) => ({
+      userId: `user${i}`,
+      username: `Player${i}`,
+      enteredAt: new Date()
+    })),
+    pointsCost: 500,
+    numberOfWinners: 3,
+    startsAt: new Date(),
+    endsAt: new Date(Date.now() + 86400000 * 7),
+    isActive: true,
+  },
+  {
+    id: '3',
+    title: 'Free Entry Giveaway',
+    description: 'No points needed - everyone can enter!',
+    prize: '5,000 Points',
+    entries: Array(89).fill(null).map((_, i) => ({
+      userId: `user${i}`,
+      username: `Player${i}`,
+      enteredAt: new Date()
+    })),
+    pointsCost: 0,
+    numberOfWinners: 5,
+    startsAt: new Date(),
+    endsAt: new Date(Date.now() + 86400000),
+    isActive: true,
+  },
 ];
 
-const mockLeaderboard: LeaderboardEntry[] = [
-  { rank: 1, userId: '1', username: 'LuckyAce', points: 125000, wins: 45, losses: 12, winRate: 78.9 },
-  { rank: 2, userId: '2', username: 'HighRoller', points: 98500, wins: 38, losses: 15, winRate: 71.7 },
-  { rank: 3, userId: '3', username: 'StreamKing', points: 87200, wins: 32, losses: 18, winRate: 64.0 },
+const mockTournaments: Tournament[] = [
+  {
+    id: '1',
+    title: 'Friday Night Showdown',
+    description: 'Weekly 8-player tournament with amazing prizes',
+    prize: '$1,000 Cash Prize',
+    tournamentType: 8,
+    participants: Array(8).fill(null).map((_, i) => ({
+      userId: `player${i}`,
+      username: `Player${i}`,
+      seed: i + 1,
+      joinedAt: new Date()
+    })),
+    startsAt: new Date(Date.now() + 3600000 * 2),
+    endsAt: new Date(Date.now() + 86400000 * 2),
+    isActive: true,
+  },
+  {
+    id: '2',
+    title: 'Weekend Championship',
+    description: 'Elite 16-player tournament for the best competitors',
+    prize: '$2,500 Grand Prize',
+    tournamentType: 16,
+    participants: Array(12).fill(null).map((_, i) => ({
+      userId: `player${i}`,
+      username: `Player${i}`,
+      seed: i + 1,
+      joinedAt: new Date()
+    })),
+    startsAt: new Date(Date.now() + 86400000),
+    endsAt: new Date(Date.now() + 86400000 * 3),
+    isActive: true,
+  },
 ];
 
 export default function HomePage() {
@@ -70,18 +134,16 @@ export default function HomePage() {
 
   if (!mounted) return null;
 
-  const openedBonuses = mockActiveBonusHunt.bonuses.filter(b => b.isOpened).length;
-  const totalBonuses = mockActiveBonusHunt.bonuses.length;
-
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-8">
+          <AuthToastHandler />
           {/* Hero Section with Stream */}
           <section>
             <StreamEmbed channel="your-channel" platform="kick" />
           </section>
 
           {/* Quick Stats */}
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <section className="grid grid-cols-2 gap-4">
             <Card variant="glass" className="text-center">
               <div className="flex flex-col items-center">
                 <Users className="w-8 h-8 text-purple-400 mb-2" />
@@ -91,23 +153,9 @@ export default function HomePage() {
             </Card>
             <Card variant="glass" className="text-center">
               <div className="flex flex-col items-center">
-                <Target className="w-8 h-8 text-green-400 mb-2" />
-                <p className="text-2xl font-bold text-white">{openedBonuses}/{totalBonuses}</p>
-                <p className="text-sm text-gray-400">Bonuses Opened</p>
-              </div>
-            </Card>
-            <Card variant="glass" className="text-center">
-              <div className="flex flex-col items-center">
                 <Gift className="w-8 h-8 text-pink-400 mb-2" />
                 <p className="text-2xl font-bold text-white">3</p>
                 <p className="text-sm text-gray-400">Active Giveaways</p>
-              </div>
-            </Card>
-            <Card variant="glass" className="text-center">
-              <div className="flex flex-col items-center">
-                <Zap className="w-8 h-8 text-yellow-400 mb-2" />
-                <p className="text-2xl font-bold text-white">125K</p>
-                <p className="text-sm text-gray-400">Top Points</p>
               </div>
             </Card>
           </section>
@@ -148,55 +196,22 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* Top Players Preview */}
+          {/* Active Tournaments */}
           <section>
-            <Card variant="gradient">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-yellow-500" />
-                    Top Players This Week
-                  </CardTitle>
-                  <Link href="/leaderboard">
-                    <Button variant="ghost" size="sm">Full Leaderboard</Button>
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {mockLeaderboard.map((entry) => (
-                    <div
-                      key={entry.userId}
-                      className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                            entry.rank === 1
-                              ? 'bg-yellow-500 text-black'
-                              : entry.rank === 2
-                              ? 'bg-gray-400 text-black'
-                              : 'bg-amber-600 text-black'
-                          }`}
-                        >
-                          {entry.rank}
-                        </span>
-                        <div>
-                          <p className="font-semibold text-white">{entry.username}</p>
-                          <p className="text-sm text-gray-400">
-                            {entry.wins}W / {entry.losses}L
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-white">{formatNumber(entry.points)}</p>
-                        <p className="text-sm text-green-400">{entry.winRate}% WR</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Swords className="w-6 h-6 text-orange-400" />
+                Active Tournaments
+              </h2>
+              <Link href="/tournaments">
+                <Button variant="ghost" size="sm">View All</Button>
+              </Link>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              {mockTournaments.map((tournament) => (
+                <TournamentCard key={tournament.id} tournament={tournament} />
+              ))}
+            </div>
           </section>
     </div>
   );

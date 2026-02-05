@@ -1,78 +1,69 @@
 'use client';
 
-import { useState } from 'react';
-import { Gift } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Gift, Plus } from 'lucide-react';
 import { GiveawayCard } from '@/components/giveaway';
-import { Card, Badge } from '@/components/ui';
+import { Card, Badge, Button } from '@/components/ui';
+import { CreateGiveawayModal, type GiveawayFormData } from '@/components/admin';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 import type { Giveaway } from '@/types';
-
-// Mock data
-const mockGiveaways: Giveaway[] = [
-  {
-    id: '1',
-    title: 'Weekly VIP Giveaway',
-    description: 'Enter for a chance to win exclusive VIP status! Prize: 1 Month VIP + 10,000 Points',
-    prize: '1 Month VIP + 10,000 Points',
-    entries: [],
-    pointsCost: 100,
-    numberOfWinners: 1,
-    startsAt: new Date(),
-    endsAt: new Date(Date.now() + 86400000 * 3),
-    isActive: true,
-  },
-  {
-    id: '2',
-    title: 'Monthly Cash Prize',
-    description: 'Biggest giveaway of the month - real cash prizes! Prize: $500 Cash',
-    prize: '$500 Cash',
-    entries: Array(234).fill({ userId: '', username: '', enteredAt: new Date() }),
-    pointsCost: 500,
-    numberOfWinners: 3,
-    startsAt: new Date(),
-    endsAt: new Date(Date.now() + 86400000 * 7),
-    isActive: true,
-  },
-  {
-    id: '3',
-    title: 'Free Entry Giveaway',
-    description: 'No points needed - everyone can enter! Prize: 5,000 Points',
-    prize: '5,000 Points',
-    entries: Array(89).fill({ userId: '', username: '', enteredAt: new Date() }),
-    pointsCost: 0,
-    numberOfWinners: 5,
-    startsAt: new Date(),
-    endsAt: new Date(Date.now() + 86400000),
-    isActive: true,
-  },
-];
-
-const pastGiveaways: Giveaway[] = [
-  {
-    id: '4',
-    title: 'Last Week VIP',
-    description: 'Previous VIP giveaway winner announced! Prize: 1 Month VIP',
-    prize: '1 Month VIP',
-    entries: Array(450).fill({ userId: '', username: '', enteredAt: new Date() }),
-    pointsCost: 100,
-    numberOfWinners: 1,
-    startsAt: new Date(Date.now() - 86400000 * 10),
-    endsAt: new Date(Date.now() - 86400000 * 3),
-    isActive: false,
-    winners: [
-      { userId: 'winner123', username: 'LuckyWinner42', wonAt: new Date(Date.now() - 86400000 * 3) }
-    ],
-  },
-];
 
 type FilterType = 'active' | 'ended';
 
 export default function GiveawaysPage() {
   const [filter, setFilter] = useState<FilterType>('active');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const allGiveaways = [...mockGiveaways, ...pastGiveaways];
+  useEffect(() => {
+    fetchGiveaways();
+  }, []);
 
-  const filteredGiveaways = allGiveaways.filter((g) => {
+  const fetchGiveaways = async () => {
+    try {
+      const response = await fetch('/api/giveaways');
+      if (!response.ok) {
+        throw new Error('Failed to fetch giveaways');
+      }
+      const data = await response.json();
+      setGiveaways(data.giveaways || []);
+    } catch (error) {
+      console.error('❌ Error fetching giveaways:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateGiveaway = async (data: GiveawayFormData) => {
+    try {
+      const response = await fetch('/api/admin/giveaways/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create giveaway');
+      }
+
+      const result = await response.json();
+      console.log('✅ Giveaway created:', result);
+
+      // Refresh the giveaways list
+      fetchGiveaways();
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error('❌ Error creating giveaway:', error);
+      alert('Failed to create giveaway. Please try again.');
+    }
+  };
+
+  const filteredGiveaways = giveaways.filter((g) => {
     switch (filter) {
       case 'active':
         return g.isActive;
@@ -84,18 +75,37 @@ export default function GiveawaysPage() {
   });
 
   const filters: { value: FilterType; label: string; count: number }[] = [
-    { value: 'active', label: 'Active', count: allGiveaways.filter((g) => g.isActive).length },
-    { value: 'ended', label: 'Ended', count: allGiveaways.filter((g) => !g.isActive).length },
+    { value: 'active', label: 'Active', count: giveaways.filter((g) => g.isActive).length },
+    { value: 'ended', label: 'Ended', count: giveaways.filter((g) => !g.isActive).length },
   ];
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="text-center text-gray-400">Loading giveaways...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3 mb-4">
-          <Gift className="w-8 h-8 text-pink-400" />
-          Giveaways
-        </h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <Gift className="w-8 h-8 text-pink-400" />
+            Giveaways
+          </h1>
+          {user?.isAdmin && (
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-pink-600 hover:bg-pink-700 text-white flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Create Giveaway
+            </Button>
+          )}
+        </div>
         <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
       </div>
 
@@ -132,6 +142,13 @@ export default function GiveawaysPage() {
           ))}
         </div>
       )}
+
+      {/* Create Modal */}
+      <CreateGiveawayModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateGiveaway}
+      />
     </div>
   );
 }

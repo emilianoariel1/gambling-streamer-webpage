@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Trophy, Gift, Settings, ChevronDown } from 'lucide-react';
+import { User, LogOut, Settings, ChevronDown } from 'lucide-react';
 import { Avatar, Badge } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
-import { formatNumber } from '@/lib/utils';
 import Link from 'next/link';
 
 interface UserMenuProps {
@@ -32,8 +31,6 @@ export function UserMenu({ className = '' }: UserMenuProps) {
 
   const menuItems = [
     { icon: User, label: 'Profile', href: '/profile' },
-    { icon: Trophy, label: 'Leaderboard', href: '/leaderboard' },
-    { icon: Gift, label: 'My Giveaways', href: '/giveaways?filter=entered' },
     { icon: Settings, label: 'Settings', href: '/settings' },
   ];
 
@@ -54,9 +51,6 @@ export function UserMenu({ className = '' }: UserMenuProps) {
         <div className="hidden md:block text-left">
           <p className="font-semibold text-white text-sm leading-tight">
             {user.displayName}
-          </p>
-          <p className="text-xs text-yellow-400">
-            {formatNumber(user.points)} points
           </p>
         </div>
         <ChevronDown
@@ -81,19 +75,12 @@ export function UserMenu({ className = '' }: UserMenuProps) {
               />
               <div>
                 <p className="font-bold text-white">{user.displayName}</p>
-                <p className="text-sm text-gray-400">@{user.username}</p>
                 <div className="flex gap-1 mt-1">
                   {user.isVip && <Badge variant="vip" size="sm">VIP</Badge>}
                   {user.isModerator && <Badge variant="mod" size="sm">MOD</Badge>}
                   {user.isSubscriber && <Badge variant="success" size="sm">SUB</Badge>}
                 </div>
               </div>
-            </div>
-            <div className="mt-3 flex items-center justify-between text-sm">
-              <span className="text-gray-400">Balance</span>
-              <span className="font-bold text-yellow-400">
-                {formatNumber(user.points)} points
-              </span>
             </div>
           </div>
 

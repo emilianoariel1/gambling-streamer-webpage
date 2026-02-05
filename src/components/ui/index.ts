@@ -5,3 +5,5 @@ export { Avatar } from './Avatar';
 export { Badge } from './Badge';
 export { ProgressBar } from './ProgressBar';
 export { Modal } from './Modal';
+export { Toast, ToastContainer } from './Toast';
+export { ToastProvider } from './ToastProvider';

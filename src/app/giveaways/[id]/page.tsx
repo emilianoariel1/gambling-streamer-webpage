@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Gift, Clock, Users, Trophy, Coins, Calendar } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, Gift, Clock, Users, Trophy, Coins } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Avatar } from '@/components/ui';
 import { useAppStore } from '@/lib/store';
 import { useSocket } from '@/hooks/useSocket';
@@ -112,14 +113,17 @@ export default function GiveawayDetailPage() {
   if (!giveaway) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
+        <Link
+          href="/giveaways"
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Giveaways
+        </Link>
         <Card className="text-center py-12">
           <Gift className="w-12 h-12 mx-auto text-gray-600 mb-4" />
           <h3 className="text-lg font-semibold text-white mb-2">Giveaway not found</h3>
           <p className="text-gray-400 mb-4">This giveaway doesn't exist or has been removed.</p>
-          <Button onClick={() => router.push('/giveaways')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Giveaways
-          </Button>
         </Card>
       </div>
     );
@@ -148,14 +152,13 @@ export default function GiveawayDetailPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Back Button */}
-      <Button
-        variant="ghost"
-        onClick={() => router.push('/giveaways')}
-        className="mb-6"
+      <Link
+        href="/giveaways"
+        className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors cursor-pointer"
       >
-        <ArrowLeft className="w-4 h-4 mr-2" />
+        <ArrowLeft className="w-4 h-4" />
         Back to Giveaways
-      </Button>
+      </Link>
 
       {/* Header */}
       <Card variant="gradient" className="mb-6">
@@ -292,14 +295,6 @@ export default function GiveawayDetailPage() {
                     <Avatar name={winner.username} src={winner.avatar} size="md" />
                     <div>
                       <p className="font-semibold text-white">{winner.username}</p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        Won {new Date(winner.wonAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </p>
                     </div>
                   </div>
                   <Trophy className="w-5 h-5 text-yellow-500" />
